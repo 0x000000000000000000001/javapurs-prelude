@@ -4,7 +4,7 @@
         double number = ((Number) value).doubleValue();
         if (!Double.isFinite(number)) return Double.toString(number);
         if (number == 0.0) return "0.0";
-        java.math.BigDecimal decimal = java.math.BigDecimal.valueOf(number).stripTrailingZeros();
+        java.math.BigDecimal decimal = shortestDecimal(number).stripTrailingZeros();
         double magnitude = Math.abs(number);
         if (magnitude >= 1e-6 && magnitude < 1e21) {
             String result = decimal.toPlainString();
@@ -12,6 +12,34 @@
         }
         return decimal.toString().replace('E', 'e');
     };
+
+    // ECMAScript Number::toString: the decimal with the fewest significant
+    // digits that round-trips, closest to the exact value, ties to even.
+    private static java.math.BigDecimal shortestDecimal(double value) {
+        java.math.BigDecimal exact = new java.math.BigDecimal(value);
+        for (int precision = 1; precision <= 17; precision++) {
+            java.math.BigDecimal best = null;
+            for (java.math.RoundingMode mode : new java.math.RoundingMode[]{
+                java.math.RoundingMode.HALF_EVEN, java.math.RoundingMode.HALF_UP,
+                java.math.RoundingMode.FLOOR, java.math.RoundingMode.CEILING}) {
+                java.math.BigDecimal candidate = exact.round(new java.math.MathContext(precision, mode));
+                if (Double.parseDouble(candidate.toString()) != value) continue;
+                if (best == null) {
+                    best = candidate;
+                    continue;
+                }
+                int cmp = candidate.subtract(exact).abs().compareTo(best.subtract(exact).abs());
+                if (cmp < 0
+                    || (cmp == 0
+                        && candidate.stripTrailingZeros().unscaledValue().testBit(0) == false
+                        && best.stripTrailingZeros().unscaledValue().testBit(0))) {
+                    best = candidate;
+                }
+            }
+            if (best != null) return best;
+        }
+        return exact.round(new java.math.MathContext(17, java.math.RoundingMode.HALF_EVEN));
+    }
 
     public static final Object showCharImpl = (java.util.function.Function<Object, Object>) (value) -> {
         char code = value instanceof Character ? (Character) value : ((String) value).charAt(0);
