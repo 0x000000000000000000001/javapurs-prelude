@@ -1,5 +1,9 @@
 # purescript-prelude
 
+Java port of the PureScript `prelude` package. See the
+[port maintenance guide](../javapurs/docs/port-maintenance.md)
+for source layout, local dependency selection and JVM validation.
+
 ## JVM tests
 
 `./bin/test` selects `prelude` in the [common isolated runner](../javapurs/docs/testing.md#port-particulier), preserving this checkout and its outputs. `MainRun` calls the original synchronous `AlmostEff = Unit -> Unit` entrypoint.
